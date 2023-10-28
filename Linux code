@@ -1,0 +1,73 @@
+
+#include <cstdio>
+#include <cstring>
+#include <unistd.h>
+#include <vector>
+#include <iostream>
+
+using namespace std;
+
+const int numbers = 10000;
+const int noProcesses = 10;
+
+bool isPrime(int n) {
+    if (n <= 1) return false;
+    for (int i = 2; i * i <= n; i++) {
+        if (n % i == 0)
+            return false;
+    }
+    return true;
+}
+
+void childProcess(int readPipe, int writePipe) {
+    int i;
+    read(readPipe, &i, sizeof(int);
+    vector<int> primeVector;
+    for (int j = i * (numbers / noProcesses) + 1; j <= (i + 1) * (numbers / noProcesses); j++) {
+        if (j <= numbers && isPrime(j)) {
+            primeVector.push_back(j);
+        }
+    }
+    int vectorSize = primeVector.size();
+    write(writePipe, &vectorSize, sizeof(int));
+    write(writePipe, primeVector.data(), vectorSize * sizeof(int));
+    exit(1);
+}
+
+void parentProcess(int readPipe, int writePipe) {
+    for (int j = 0; j < noProcesses; j++) {
+        write(writePipe, &j, sizeof(int));
+    }
+    for (int j = 0; j < noProcesses; j++) {
+        printf("Process %d: ", j);
+        int vectorSize;
+        read(readPipe, &vectorSize, sizeof(int));
+        vector<int> primeVector(vectorSize);
+        read(readPipe, primeVector.data(), vectorSize * sizeof(int));
+        for (int i = 0; i < vectorSize; i++) {
+            printf("%d, ", primeVector[i]);
+        }
+        printf("\n");
+    }
+}
+
+int main() {
+    int processID = 1;
+    int firstPipe[2], secondPipe[2];
+    
+    if (pipe(firstPipe) || pipe(secondPipe)) {
+        perror("Error creating pipe");
+        exit(-1);
+    }
+    
+    for (int j = 0; j < noProcesses; j++) {
+        processID = fork();
+        if (processID == -1) {
+            perror("Error creating child process");
+            exit(-1);
+        } else if (processID == 0) {
+            childProcess(firstPipe[0], secondPipe[1]);
+        }
+    }
+    
+    parentProcess(secondPipe[0], firstPipe[1]);
